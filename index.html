@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard de Pedidos en Tiempo Real</title>
+    <style>
+        body { font-family: sans-serif; display: flex; gap: 20px; }
+        .column { width: 32%; border: 1px solid #ccc; padding: 10px; border-radius: 8px; }
+        .column h2 { text-align: center; margin-top: 0; }
+        .order-card { background-color: #f0f8ff; border: 1px solid #add8e6; padding: 15px; margin-top: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="column" id="col-1140"><h2>11:40</h2></div>
+    <div class="column" id="col-1200"><h2>12:00</h2></div>
+    <div class="column" id="col-1230"><h2>12:30</h2></div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Conéctate al endpoint WebSocket de tu servidor FastAPI
+            const socket = new WebSocket("ws://localhost:8000/ws/orders");
+
+            socket.onopen = function(event) {
+                console.log("Conectado al servidor de pedidos en tiempo real.");
+            };
+
+            socket.onmessage = function(event) {
+                // Parsea el JSON que llega del servidor
+                const orderData = JSON.parse(event.data);
+                console.log("Nuevo pedido recibido:", orderData);
+
+                // Encuentra la columna correcta según la hora programada
+                const targetColumnId = "col-" + orderData.scheduled_time.replace(":", "");
+                const column = document.getElementById(targetColumnId);
+
+                if (column) {
+                    // Crea el elemento HTML para el nuevo pedido
+                    const orderCard = document.createElement("div");
+                    orderCard.className = "order-card";
+                    orderCard.innerHTML = `<strong>${orderData.order_id}</strong><p>${orderData.details}</p>`;
+
+                    // Agrega la tarjeta del pedido a la columna correcta
+                    column.appendChild(orderCard);
+                }
+            };
+
+            socket.onclose = function(event) {
+                console.log("Desconectado del servidor.");
+            };
+
+            socket.onerror = function(error) {
+                console.error("Error en WebSocket:", error);
+            };
+        });
+    </script>
+</body>
+</html>
