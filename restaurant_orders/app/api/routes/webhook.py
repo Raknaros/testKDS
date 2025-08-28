@@ -22,18 +22,21 @@ async def telegram_webhook(
         if not message:
             raise HTTPException(status_code=400, detail="No message found in update")
 
-        # 2. Procesar el mensaje con AI
-        order_data = await ai_agent.process_message(message)
+        # 2. Procesar el mensaje con AI para obtener las llamadas a funciones
+        function_calls = await ai_agent.process_message(message)
         
-        # 3. Procesar el pedido
+        # 3. Procesar el pedido usando las funciones devueltas por el LLM
         order_processor = OrderProcessor(db, printer_service, dashboard_manager)
-        order = await order_processor.create_order(order_data)
+        order_details = await order_processor.create_order_from_llm(function_calls)
         
         return {
             "status": "success",
-            "order_id": order.id,
+            "order_id": order_details.get("id"),
             "message": "Order processed successfully"
         }
         
     except Exception as e:
+        # Es buena idea loggear el error real en un sistema de producción
+        # import logging
+        # logging.exception("Error processing webhook")
         raise HTTPException(status_code=500, detail=str(e))
