@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # Configuración de IA
     MODEL_KEY: str = ""
     MODEL: str = "openai/gpt-3.5-turbo"
-    API_URL: str = "http://localhost"
+    API_URL: str = "https://localhost"
     
     # Configuración de la impresora
     PRINTER_NAME: str = "POS-58"

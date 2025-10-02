@@ -2,7 +2,9 @@ import aiohttp
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.routes import webhook, dashboard
+from app.api.routes.webhook import router as webhook_router
+# dashboard no existe, así que comentado
+# from app.api.routes.dashboard import router as dashboard_router
 from app.database.connection import init_db
 
 app = FastAPI(
@@ -20,8 +22,8 @@ app.add_middleware(
 )
 
 # Incluir routers
-app.include_router(webhook.router, prefix=settings.API_V1_STR)
-app.include_router(dashboard.router, prefix=settings.API_V1_STR)
+app.include_router(webhook_router, prefix=settings.API_V1_STR)
+# app.include_router(dashboard_router, prefix=settings.API_V1_STR)  # No existe aún
 
 async def setup_telegram_webhook():
     """Configura el webhook de Telegram automáticamente."""

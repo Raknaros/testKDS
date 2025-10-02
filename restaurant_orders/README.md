@@ -90,7 +90,7 @@ pip install -r requirements.txt
 # - MODEL_KEY (OpenRouter API key)
 
 # 4. Iniciar el servidor
-uvicorn app.main:app --host 0.0.0.0 --port 80 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 443 --reload
 ```
 
 ## Estructura del Proyecto
