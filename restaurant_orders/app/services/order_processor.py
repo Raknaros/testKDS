@@ -2,9 +2,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.services.printer import PrinterService
 from app.api.websocket.connection import DashboardManager
-from google.generativeai.types import Part
-from typing import List
+from typing import List, Dict, Any
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrderProcessor:
     def __init__(self, db_session: AsyncSession, printer_service: PrinterService, ws_manager: DashboardManager):
@@ -12,17 +14,19 @@ class OrderProcessor:
         self.printer = printer_service
         self.ws_manager = ws_manager
 
-    async def create_order_from_llm(self, function_calls: List[Part]):
+    async def create_order_from_llm(self, tool_calls: List[Dict[str, Any]]):
+        logger.info(f"Processing tool_calls: {tool_calls}")
         pedido_id = None
         full_order_details = {}
-        
+
         try:
             # Iniciar una transacción
             async with self.db_session.begin():
                 # 1. Buscar y ejecutar insert_pedido para obtener el ID
-                for part in function_calls:
-                    if part.function_call.name == "insert_pedido":
-                        args = part.function_call.args
+                logger.debug(f"Looking for insert_pedido in {len(tool_calls)} tool calls")
+                for part in tool_calls:
+                    if part.get('function_call', {}).get('name') == "insert_pedido":
+                        args = part['function_call']['args']
                         full_order_details.update(dict(args)) # Guardar args para después
                         
                         sql = text("SELECT insert_pedido(:v_cliente_test, :v_hora_entrega, :v_destino, :v_importe_total, :v_observaciones)")
@@ -50,9 +54,9 @@ class OrderProcessor:
 
                 # 2. Ejecutar insert_detalle_pedido para cada item
                 items = []
-                for part in function_calls:
-                    if part.function_call.name == "insert_detalle_pedido":
-                        args = part.function_call.args
+                for part in tool_calls:
+                    if part.get('function_call', {}).get('name') == "insert_detalle_pedido":
+                        args = part['function_call']['args']
                         items.append(dict(args)) # Guardar para el ticket
                         
                         sql = text("SELECT insert_detalle_pedido(:v_pedido_id, :v_producto_test, :v_cantidad, :v_precio, :v_notas)")
@@ -69,9 +73,9 @@ class OrderProcessor:
                 full_order_details['items'] = items
 
                 # 3. Ejecutar insert_pago
-                for part in function_calls:
-                    if part.function_call.name == "insert_pago":
-                        args = part.function_call.args
+                for part in tool_calls:
+                    if part.get('function_call', {}).get('name') == "insert_pago":
+                        args = part['function_call']['args']
                         sql = text("SELECT insert_pago(:v_pedido_id, :v_metodo, :v_importe, :v_estado, :v_fecha_hora)")
                         await self.db_session.execute(
                             sql,
@@ -98,3 +102,4 @@ class OrderProcessor:
             # El rollback es automático si 'async with' falla
             print(f"Error processing order: {str(e)}")
             raise
+

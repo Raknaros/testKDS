@@ -1,92 +1,87 @@
-import os
-import google.generativeai as genai
-from google.generativeai.types import FunctionDeclaration, Tool
+import logging
+from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage
+from app.config import settings
 
-# Es una buena práctica cargar las variables de entorno al inicio
-from dotenv import load_dotenv
-load_dotenv()
+logger = logging.getLogger(__name__)
+
+# Definición de las herramientas usando LangChain
+@tool
+def insert_pedido(v_cliente_test: str, v_hora_entrega: str, v_destino: str, v_importe_total: float, v_observaciones: str = ""):
+    """Registra un nuevo pedido principal. Devuelve el ID del pedido."""
+    pass  # La lógica se implementará en el OrderProcessor
+
+@tool
+def insert_detalle_pedido(v_producto_test: str, v_cantidad: int, v_precio: float, v_notas: str = ""):
+    """Registra un producto específico dentro de un pedido existente."""
+    pass
+
+@tool
+def insert_pago(v_metodo: str, v_importe: float, v_estado: str, v_fecha_hora: str):
+    """Registra la información del pago asociado a un pedido."""
+    pass
 
 class AIOrderAgent:
     def __init__(self):
         """
-        Inicializa el agente de IA configurando el modelo de Gemini
+        Inicializa el agente de IA configurando el modelo con OpenRouter via LangChain
         y las herramientas (funciones) que puede utilizar.
         """
-        # Configurar el API key de Google
-        api_key = os.getenv("GOOGLE_API_KEY")
+        # Configurar el API key de OpenRouter
+        api_key = settings.MODEL_KEY
         if not api_key:
-            raise ValueError("La variable de entorno GOOGLE_API_KEY no está configurada.")
-        genai.configure(api_key=api_key)
+            raise ValueError("La variable de entorno MODEL_KEY no está configurada.")
 
-        # Definición de las herramientas que el LLM puede invocar
-        self.tools = [
-            Tool(function_declarations=[
-                FunctionDeclaration(
-                    name="insert_pedido",
-                    description="Registra un nuevo pedido principal. Devuelve el ID del pedido.",
-                    parameters={
-                        "type": "OBJECT",
-                        "properties": {
-                            "v_cliente_test": {"type": "STRING", "description": "Nombre del cliente que realiza el pedido."},
-                            "v_hora_entrega": {"type": "STRING", "description": "Hora de entrega solicitada (formato HH:MM) o 'lo antes posible'."},
-                            "v_destino": {"type": "STRING", "description": "Dirección de entrega o si el cliente 'retira en local'."},
-                            "v_importe_total": {"type": "NUMBER", "description": "El coste total calculado del pedido."},
-                            "v_observaciones": {"type": "STRING", "description": "Instrucciones especiales o comentarios del cliente sobre el pedido general."}
-                        },
-                        "required": ["v_cliente_test", "v_importe_total", "v_destino"]
-                    },
-                ),
-                FunctionDeclaration(
-                    name="insert_detalle_pedido",
-                    description="Registra un producto específico dentro de un pedido existente.",
-                    parameters={
-                        "type": "OBJECT",
-                        "properties": {
-                            "v_producto_test": {"type": "STRING", "description": "Nombre del producto o item pedido."},
-                            "v_cantidad": {"type": "INTEGER", "description": "Cantidad del producto solicitado."},
-                            "v_precio": {"type": "NUMBER", "description": "Precio unitario del producto."},
-                            "v_notas": {"type": "STRING", "description": "Notas o modificaciones específicas para este producto (ej. 'sin cebolla')."}
-                        },
-                        "required": ["v_producto_test", "v_cantidad", "v_precio"]
-                    },
-                ),
-                FunctionDeclaration(
-                    name="insert_pago",
-                    description="Registra la información del pago asociado a un pedido.",
-                    parameters={
-                        "type": "OBJECT",
-                        "properties": {
-                            "v_metodo": {"type": "STRING", "description": "Método de pago (ej. 'tarjeta', 'efectivo', 'transferencia')."},
-                            "v_importe": {"type": "NUMBER", "description": "El importe que se paga."},
-                            "v_estado": {"type": "STRING", "description": "Estado del pago (ej. 'pagado', 'pendiente')."},
-                            "v_fecha_hora": {"type": "STRING", "description": "Fecha y hora del pago en formato ISO."}
-                        },
-                        "required": ["v_metodo", "v_importe", "v_estado"]
-                    },
-                )
-            ])
-        ]
+        model_name = settings.MODEL
 
-        # Inicializar el modelo de Gemini con las herramientas
-        self.model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            tools=self.tools
+        # Inicializar el modelo con OpenRouter (compatible con OpenAI)
+        self.llm = ChatOpenAI(
+            model=model_name,
+            openai_api_key=api_key,
+            openai_api_base="https://openrouter.ai/api/v1",
+            temperature=0
         )
+
+        # Bind tools to the model
+        self.tools = [insert_pedido, insert_detalle_pedido, insert_pago]
+        self.llm_with_tools = self.llm.bind_tools(self.tools)
 
     async def process_message(self, message: str):
         """
         Procesa un mensaje de texto, utiliza el LLM para entenderlo y devuelve
         las llamadas a funciones que el modelo considera necesarias.
         """
+        logger.info(f"Processing message: {message}")
         try:
-            # Iniciar una sesión de chat para mantener el contexto si fuera necesario
-            chat = self.model.start_chat()
-            response = await chat.send_message_async(message)
+            # Crear el mensaje humano
+            human_message = HumanMessage(content=message)
 
-            # Devolver las llamadas a funciones que el LLM ha generado
-            return response.candidates[0].content.parts
-            
+            # Invocar el modelo con herramientas
+            response = await self.llm_with_tools.ainvoke([human_message])
+            logger.debug(f"AI response tool_calls: {response.tool_calls}")
+
+            # Devolver las llamadas a herramientas
+            return response.tool_calls
+
         except Exception as e:
-            print(f"Error processing message with AI: {str(e)}")
-            # En un caso real, aquí se podría añadir un logging más robusto
+            logger.error(f"Error processing message with AI: {str(e)}")
             raise
+
+    async def generate_response(self, message_data: dict):
+        """
+        Genera una respuesta inteligente al mensaje del usuario usando IA.
+        """
+        message = message_data.get("message", "")
+        logger.info(f"Generating AI response for message: {message}")
+        try:
+            prompt = f"Responde de manera amigable y útil al siguiente mensaje: '{message}'. Mantén la respuesta concisa."
+            human_message = HumanMessage(content=prompt)
+            response = await self.llm.ainvoke([human_message])
+            ai_response = response.content.strip()
+            logger.debug(f"Generated AI response: {ai_response}")
+            return ai_response
+        except Exception as e:
+            logger.error(f"Error generating AI response: {str(e)}")
+            # Fallback
+            return f"Entendido: {message}"

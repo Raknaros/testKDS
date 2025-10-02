@@ -9,46 +9,26 @@ Crear un sistema que automatice el proceso completo desde que un cliente hace un
 
 ### Características Principales
 
-1. **Bot de Telegram para Pedidos**
-   - Recepción de pedidos a través de mensajes de texto naturales
-   - Procesamiento de lenguaje natural para entender los pedidos
-   - Comunicación bidireccional con el cliente
+1. **Bot de Telegram con IA**
+    - Recepción de mensajes vía Telegram
+    - Respuestas inteligentes generadas por IA (OpenRouter)
+    - Comunicación bidireccional automática
 
-2. **Procesamiento Inteligente**
-   - Integración con IA para interpretar pedidos en lenguaje natural
-   - Extracción automática de:
-     * Items y cantidades
-     * Información del cliente
-     * Instrucciones especiales
-     * Horarios de entrega
+2. **Procesamiento con LangChain**
+    - Integración con modelos de IA via OpenRouter
+    - Respuestas contextuales y naturales
+    - Configuración automática del webhook
 
-3. **Gestión de Base de Datos**
-   - Almacenamiento persistente de pedidos
-   - Historial de clientes
-   - Seguimiento de estados de pedidos
-   - Reportes y análisis
-
-4. **Sistema de Impresión**
-   - Impresión automática de tickets
-   - Formato personalizado para cocina
-   - Gestión de cola de impresión
-
-5. **Dashboard en Tiempo Real**
-   - Visualización de pedidos activos
-   - Actualización en tiempo real vía WebSocket
-   - Organización por horarios y estados
-   - Interfaz intuitiva para el personal
-
-6. **API RESTful**
-   - Endpoints para gestión de pedidos
-   - Integración con Telegram
-   - WebSockets para actualizaciones en tiempo real
+3. **API RESTful**
+    - Endpoint de webhook para Telegram
+    - Configuración automática al iniciar
+    - Manejo de errores robusto
 
 ## Tecnologías Utilizadas
 
 - **Backend**: FastAPI, Python
 - **Base de Datos**: PostgreSQL, SQLAlchemy
-- **IA/NLP**: LangChain/Google ADK
+- **IA/NLP**: LangChain/OpenRouter
 - **Frontend**: HTML, CSS, JavaScript (WebSocket)
 - **Impresión**: ESCPOS/Win32Print
 - **Mensajería**: API de Telegram
@@ -58,9 +38,9 @@ Crear un sistema que automatice el proceso completo desde que un cliente hace un
 
 - [x] Estructura base del proyecto
 - [x] Configuración inicial de la API
-- [x] Modelos de base de datos básicos
-- [x] Integración básica con Telegram
-- [x] Dashboard simple en tiempo real
+- [x] Integración con Telegram via webhook
+- [x] Respuestas con IA via OpenRouter
+- [x] Configuración automática del webhook
 
 ## Alcance Futuro (Roadmap)
 
@@ -77,41 +57,21 @@ Crear un sistema que automatice el proceso completo desde que un cliente hace un
 
 ## Próximos Pasos de Desarrollo
 
-1. **Integración con Telegram**
-   - Configuración del bot
-   - Manejo de webhooks
-   - Procesamiento de mensajes
-   - Respuestas automáticas
+1. **Procesamiento de Pedidos**
+    - Análisis de mensajes para extraer pedidos
+    - Gestión de base de datos para órdenes
+    - Sistema de impresión de tickets
 
-2. **Procesamiento de Lenguaje Natural**
-   - Configuración del agente AI
-   - Entrenamiento del modelo
-   - Extracción de información
-   - Manejo de casos especiales
+2. **Dashboard en Tiempo Real**
+    - Interfaz web para gestión de pedidos
+    - WebSockets para actualizaciones live
+    - Filtros y organización por estados
 
-3. **Gestión de Base de Datos**
-   - Migraciones
-   - Modelos completos
-   - Queries optimizadas
-   - Backups automáticos
-
-4. **Sistema de Impresión**
-   - Configuración de impresora
-   - Formatos de tickets
-   - Manejo de errores
-   - Cola de impresión
-
-5. **Sistema de WebSockets**
-   - Conexiones en tiempo real
-   - Gestión de eventos
-   - Actualización del dashboard
-   - Manejo de reconexiones
-
-6. **Frontend del Dashboard**
-   - Diseño responsivo
-   - Interactividad
-   - Filtros y búsquedas
-   - Estados y notificaciones
+3. **Funcionalidades Avanzadas**
+    - Gestión de menú
+    - Sistema de pagos
+    - Análisis y reportes
+    - App móvil para clientes
 
 ## Requisitos de Instalación
 
@@ -127,10 +87,10 @@ pip install -r requirements.txt
 # Copiar .env.example a .env y configurar:
 # - DATABASE_URL
 # - TELEGRAM_BOT_TOKEN
-# - OPENAI_API_KEY
+# - MODEL_KEY (OpenRouter API key)
 
 # 4. Iniciar el servidor
-uvicorn app.main:app --reload
+uvicorn app.main:app --host 0.0.0.0 --port 80 --reload
 ```
 
 ## Estructura del Proyecto

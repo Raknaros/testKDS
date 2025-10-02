@@ -1,42 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.database.connection import get_session
-from app.services.ai_agent import AIOrderAgent
-from app.services.order_processor import OrderProcessor
-from app.services.printer import PrinterService
-from app.api.websocket.connection import dashboard_manager
+from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, Any
+from telegram import Bot
+
+from app.services.ai_agent import AIOrderAgent
+from app.config import settings
+
+# Instancia global del agente de IA
+ai_agent_instance = AIOrderAgent()
+
+
+# --- Router ---
 
 router = APIRouter()
-ai_agent = AIOrderAgent()
-printer_service = PrinterService()
 
-@router.post("/webhook/telegram")
-async def telegram_webhook(
-    update: Dict[str, Any],
-    db: AsyncSession = Depends(get_session)
-):
+@router.post("/webhook/telegram", status_code=200)
+async def telegram_webhook(update: Dict[str, Any] = Body(...)):
+    """
+    Endpoint para recibir actualizaciones de un webhook de Telegram y responder con IA.
+    """
     try:
-        # 1. Extraer el mensaje de Telegram
-        message = update.get("message", {}).get("text", "")
-        if not message:
-            raise HTTPException(status_code=400, detail="No message found in update")
+        # Extraer el mensaje de texto y chat_id del payload de Telegram
+        message = update.get("message", {})
+        message_text = message.get("text")
+        chat_id = message.get("chat", {}).get("id")
 
-        # 2. Procesar el mensaje con AI para obtener las llamadas a funciones
-        function_calls = await ai_agent.process_message(message)
-        
-        # 3. Procesar el pedido usando las funciones devueltas por el LLM
-        order_processor = OrderProcessor(db, printer_service, dashboard_manager)
-        order_details = await order_processor.create_order_from_llm(function_calls)
-        
-        return {
-            "status": "success",
-            "order_id": order_details.get("id"),
-            "message": "Order processed successfully"
-        }
-        
+        if not message_text or not chat_id:
+            return {"status": "ok", "message": "No text message or chat_id found"}
+
+        # Generar respuesta con el modelo de IA
+        response_text = await ai_agent_instance.generate_response({"message": message_text})
+
+        # Enviar respuesta al usuario vía Telegram
+        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        await bot.send_message(chat_id=chat_id, text=response_text)
+
+        return {"status": "success", "response": response_text}
+
     except Exception as e:
-        # Es buena idea loggear el error real en un sistema de producción
-        # import logging
-        # logging.exception("Error processing webhook")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

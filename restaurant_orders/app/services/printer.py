@@ -17,7 +17,7 @@ class PrinterService:
             print(f"Error connecting to printer: {str(e)}")
             raise
 
-    async def print_ticket(self, order: Order):
+    async def print_ticket(self, order_data: dict):
         try:
             printer = self._connect_printer()
             
@@ -29,28 +29,28 @@ class PrinterService:
             printer.text("================================\n")
             
             # Información del pedido
-            printer.text(f"Orden #: {order.id}\n")
+            printer.text(f"Orden #: {order_data.get('id', 'N/A')}\n")
             printer.text(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
-            printer.text(f"Cliente: {order.customer_name}\n")
+            printer.text(f"Cliente: {order_data.get('v_cliente_test', 'N/A')}\n")
             printer.text("--------------------------------\n")
-            
+
             # Items del pedido
             printer.text("ITEMS:\n")
-            for item in order.items:
-                printer.text(f"{item['quantity']} x {item['name']}\n")
-                printer.text(f"    ${item['price']:.2f}\n")
-            
+            for item in order_data.get('items', []):
+                printer.text(f"{item.get('v_cantidad', 0)} x {item.get('v_producto_test', 'N/A')}\n")
+                printer.text(f"    ${item.get('v_precio', 0):.2f}\n")
+
             printer.text("--------------------------------\n")
-            
+
             # Total
             printer.set(align='right', bold=True)
-            printer.text(f"TOTAL: ${order.total_amount:.2f}\n")
+            printer.text(f"TOTAL: ${order_data.get('v_importe_total', 0):.2f}\n")
             printer.set(align='left', bold=False)
-            
+
             # Instrucciones especiales
-            if order.special_instructions:
+            if order_data.get('v_observaciones'):
                 printer.text("\nInstrucciones especiales:\n")
-                printer.text(f"{order.special_instructions}\n")
+                printer.text(f"{order_data['v_observaciones']}\n")
             
             printer.text("================================\n")
             printer.text("¡Gracias por su preferencia!\n")

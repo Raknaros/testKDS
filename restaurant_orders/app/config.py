@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     # Configuración de Telegram
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_WEBHOOK_URL: str = ""
+
+    # Configuración de IA
+    MODEL_KEY: str = ""
+    MODEL: str = "openai/gpt-3.5-turbo"
+    API_URL: str = "http://localhost"
     
     # Configuración de la impresora
     PRINTER_NAME: str = "POS-58"
