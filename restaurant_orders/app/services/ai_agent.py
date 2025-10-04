@@ -6,21 +6,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Definición de las herramientas usando LangChain
-@tool
-def insert_pedido(v_cliente_test: str, v_hora_entrega: str, v_destino: str, v_importe_total: float, v_observaciones: str = ""):
-    """Registra un nuevo pedido principal. Devuelve el ID del pedido."""
-    pass  # La lógica se implementará en el OrderProcessor
-
-@tool
-def insert_detalle_pedido(v_producto_test: str, v_cantidad: int, v_precio: float, v_notas: str = ""):
-    """Registra un producto específico dentro de un pedido existente."""
-    pass
-
-@tool
-def insert_pago(v_metodo: str, v_importe: float, v_estado: str, v_fecha_hora: str):
-    """Registra la información del pago asociado a un pedido."""
-    pass
+# Herramientas disponibles - actualmente solo se usa la detección de login
+# Las herramientas específicas se implementarán cuando se necesiten
 
 class AIOrderAgent:
     def __init__(self):
@@ -43,9 +30,8 @@ class AIOrderAgent:
             temperature=0
         )
 
-        # Bind tools to the model
-        self.tools = [insert_pedido, insert_detalle_pedido, insert_pago]
-        self.llm_with_tools = self.llm.bind_tools(self.tools)
+        # No tools for now - simplified implementation
+        self.llm_with_tools = self.llm
 
     async def process_message(self, message: str):
         """
@@ -74,6 +60,22 @@ class AIOrderAgent:
         """
         message = message_data.get("message", "")
         logger.info(f"Generating AI response for message: {message}")
+
+        # Check if message contains login keywords - don't respond with AI
+        login_keywords = [
+            'iniciar sesión', 'iniciar sesion', 'login', 'log in', 'autenticar', 'autenticarme',
+            'ingresar', 'entrar', 'acceder', 'registrarme', 'registrar',
+            'quiero iniciar', 'necesito iniciar', 'deseo iniciar',
+            'session', 'sesion', 'loguear', 'loguearme', 'acceder',
+            'enviame el enlace', 'dame el link', 'link de login', 'enlace de login'
+        ]
+
+        message_lower = message.lower()
+        for keyword in login_keywords:
+            if keyword in message_lower:
+                logger.info("Login keyword detected, not generating AI response")
+                return None  # Return None to indicate login should be handled by webhook
+
         try:
             prompt = f"Responde de manera amigable y útil al siguiente mensaje: '{message}'. Mantén la respuesta concisa."
             human_message = HumanMessage(content=prompt)

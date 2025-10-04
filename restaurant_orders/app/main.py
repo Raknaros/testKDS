@@ -1,8 +1,10 @@
 import aiohttp
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from app.config import settings
 from app.api.routes.webhook import router as webhook_router
+from app.api.routes.auth import router as auth_router
 # dashboard no existe, así que comentado
 # from app.api.routes.dashboard import router as dashboard_router
 from app.database.connection import init_db
@@ -23,6 +25,7 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(webhook_router, prefix=settings.API_V1_STR)
+app.include_router(auth_router, prefix=settings.API_V1_STR)
 # app.include_router(dashboard_router, prefix=settings.API_V1_STR)  # No existe aún
 
 async def setup_telegram_webhook():
@@ -53,3 +56,8 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"message": "Restaurant Orders API"}
+
+@app.get("/login")
+async def login_page():
+    """Serve the login page"""
+    return FileResponse("frontend/login.html", media_type="text/html")
